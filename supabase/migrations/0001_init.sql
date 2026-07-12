@@ -184,6 +184,18 @@ create policy "audit_logs_v1_read" on audit_logs for select using (true);
 drop policy if exists "audit_logs_v1_write" on audit_logs;
 create policy "audit_logs_v1_write" on audit_logs for all using (true) with check (true);
 
+-- Realtime: let a second browser tab pick up changes without a refresh.
+-- Guarded so the migration still applies if the publication doesn't exist.
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    alter publication supabase_realtime add table
+      accounts, contacts, visit_reports, enquiries, rfqs, quotations, opportunities;
+  end if;
+exception when duplicate_object then
+  null;
+end $$;
+
 insert into accounts (id, name, industry, segment, country, city, account_type, key_plants, epc_consultants, owner_name, target_pumps, target_seals, target_hex, target_service) values
   ('a1000000-0000-0000-0000-000000000001', 'Petronas Refinery Kerteh', 'Oil & Gas', 'Downstream', 'Malaysia', 'Kerteh', 'End User', ARRAY['CDU Train 2', 'Hydrogen Unit'], ARRAY['Worley', 'Technip'], 'Ahmad Faris', 800000, 200000, 150000, 250000),
   ('a1000000-0000-0000-0000-000000000002', 'BASF Kuantan Chemical Complex', 'Chemical', 'Petrochemical', 'Malaysia', 'Kuantan', 'End User', ARRAY['Plant A', 'Utilities Block'], ARRAY['Linde Engineering'], 'Siti Rahimah', 600000, 180000, 300000, 120000),
@@ -197,22 +209,22 @@ insert into contacts (id, account_id, full_name, title, department, email, influ
   ('c1000000-0000-0000-0000-000000000004', 'a1000000-0000-0000-0000-000000000003', 'Encik Zaharuddin', 'Plant Engineer', 'Operations', 'zaharuddin@tnb.example', 'Medium', 'End User');
 
 insert into visit_reports (id, account_id, visit_date, visit_purpose, process_unit, equipment_discussed, contacts_met, operating_problem, competitor_at_site, customer_pain_point, opportunity_potential, next_action, next_action_owner, next_action_deadline, visit_status, converted_to_enquiry) values
-  ('v1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000001', '2025-05-12', 'Follow-up on seal failure in CDU', 'CDU Train 2', ARRAY['Mechanical Seal', 'Pump'], ARRAY['Ir. Rashdan Mokhtar'], 'High vibration on boiler feed pump; seal flush plan inadequate', 'Flowserve', 'Unplanned shutdown risk — seal MTBF under 6 months', 'Firm', 'Submit seal upgrade proposal with Plan 54 flush', 'Ahmad Faris', '2025-05-26', 'done', true),
-  ('v1000000-0000-0000-0000-000000000002', 'a1000000-0000-0000-0000-000000000002', '2025-05-20', 'Technical presentation — heat exchanger range', 'Utilities Block', ARRAY['Heat Exchanger', 'Gasket'], ARRAY['Dr. Klaus Werner'], 'Fouling on existing gasketed plate HEX causing efficiency loss', 'Alfa Laval', 'Energy cost increase due to HEX fouling; no spare plate pack onsite', 'Budgetary', 'Provide plate pack quotation and cleaning proposal', 'Siti Rahimah', '2025-06-02', 'done', false),
-  ('v1000000-0000-0000-0000-000000000003', 'a1000000-0000-0000-0000-000000000003', '2025-06-03', 'Installed base audit — pump house', 'Boiler Feed Pump House', ARRAY['Pump', 'Coupling'], ARRAY['Encik Zaharuddin'], 'Three BFPs approaching 10-year overhaul interval simultaneously', 'KSB', 'Budget constraint — needs phased overhaul plan with performance guarantee', 'Budgetary', 'Submit phased service proposal for 3 BFPs', 'David Lim', '2025-06-15', 'done', false),
-  ('v1000000-0000-0000-0000-000000000004', 'a1000000-0000-0000-0000-000000000001', '2025-06-10', 'Spec-in discussion for new project', 'Hydrogen Unit', ARRAY['Pump', 'Mechanical Seal'], ARRAY['Ir. Rashdan Mokhtar', 'Puan Suraya Hamid'], 'New H2 service pump spec not yet finalised', 'Sundyne', 'Pressure to finalise spec before FEED freeze', 'Firm', 'Submit technical comparison and draft spec sheet', 'Ahmad Faris', '2025-06-20', 'planned', false);
+  ('b1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000001', '2025-05-12', 'Follow-up on seal failure in CDU', 'CDU Train 2', ARRAY['Mechanical Seal', 'Pump'], ARRAY['Ir. Rashdan Mokhtar'], 'High vibration on boiler feed pump; seal flush plan inadequate', 'Flowserve', 'Unplanned shutdown risk — seal MTBF under 6 months', 'Firm', 'Submit seal upgrade proposal with Plan 54 flush', 'Ahmad Faris', '2025-05-26', 'done', true),
+  ('b1000000-0000-0000-0000-000000000002', 'a1000000-0000-0000-0000-000000000002', '2025-05-20', 'Technical presentation — heat exchanger range', 'Utilities Block', ARRAY['Heat Exchanger', 'Gasket'], ARRAY['Dr. Klaus Werner'], 'Fouling on existing gasketed plate HEX causing efficiency loss', 'Alfa Laval', 'Energy cost increase due to HEX fouling; no spare plate pack onsite', 'Budgetary', 'Provide plate pack quotation and cleaning proposal', 'Siti Rahimah', '2025-06-02', 'done', false),
+  ('b1000000-0000-0000-0000-000000000003', 'a1000000-0000-0000-0000-000000000003', '2025-06-03', 'Installed base audit — pump house', 'Boiler Feed Pump House', ARRAY['Pump', 'Coupling'], ARRAY['Encik Zaharuddin'], 'Three BFPs approaching 10-year overhaul interval simultaneously', 'KSB', 'Budget constraint — needs phased overhaul plan with performance guarantee', 'Budgetary', 'Submit phased service proposal for 3 BFPs', 'David Lim', '2025-06-15', 'done', false),
+  ('b1000000-0000-0000-0000-000000000004', 'a1000000-0000-0000-0000-000000000001', '2025-06-10', 'Spec-in discussion for new project', 'Hydrogen Unit', ARRAY['Pump', 'Mechanical Seal'], ARRAY['Ir. Rashdan Mokhtar', 'Puan Suraya Hamid'], 'New H2 service pump spec not yet finalised', 'Sundyne', 'Pressure to finalise spec before FEED freeze', 'Firm', 'Submit technical comparison and draft spec sheet', 'Ahmad Faris', '2025-06-20', 'planned', false);
 
 insert into enquiries (id, enquiry_number, account_id, visit_report_id, project_name, equipment_type, process_data, required_delivery_weeks, bid_due_date, competitor, probability, status) values
-  ('e1000000-0000-0000-0000-000000000001', 'ENQ-2025-0041', 'a1000000-0000-0000-0000-000000000001', 'v1000000-0000-0000-0000-000000000001', 'CDU Seal Upgrade', 'Mechanical Seal', 'Hydrocarbon service, 180°C, 12 bar, API 682 Plan 54', 10, '2025-07-01', 'Flowserve', 65, 'open'),
+  ('e1000000-0000-0000-0000-000000000001', 'ENQ-2025-0041', 'a1000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000001', 'CDU Seal Upgrade', 'Mechanical Seal', 'Hydrocarbon service, 180°C, 12 bar, API 682 Plan 54', 10, '2025-07-01', 'Flowserve', 65, 'open'),
   ('e1000000-0000-0000-0000-000000000002', 'ENQ-2025-0042', 'a1000000-0000-0000-0000-000000000002', null, 'HEX Plate Pack Replacement', 'Heat Exchanger', 'Cooling water / process fluid, AISI 316, 2.5 bar', 6, '2025-07-15', 'Alfa Laval', 40, 'open'),
-  ('e1000000-0000-0000-0000-000000000003', 'ENQ-2025-0043', 'a1000000-0000-0000-0000-000000000003', 'v1000000-0000-0000-0000-000000000003', 'BFP Overhaul Program', 'Service', 'Three BFPs, each 2MW, 10-year overhaul', 24, '2025-08-01', 'KSB', 50, 'open');
+  ('e1000000-0000-0000-0000-000000000003', 'ENQ-2025-0043', 'a1000000-0000-0000-0000-000000000003', 'b1000000-0000-0000-0000-000000000003', 'BFP Overhaul Program', 'Service', 'Three BFPs, each 2MW, 10-year overhaul', 24, '2025-08-01', 'KSB', 50, 'open');
 
 insert into rfqs (id, rfq_number, enquiry_id, account_id, technical_requirement, scope, bid_due_date, status) values
-  ('r1000000-0000-0000-0000-000000000001', 'RFQ-2025-0031', 'e1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000001', 'API 682 Category 3 dual seal, Plan 54, Inconel 718 spring', 'Supply 4 sets + commissioning support', '2025-07-01', 'received'),
-  ('r1000000-0000-0000-0000-000000000002', 'RFQ-2025-0032', 'e1000000-0000-0000-0000-000000000003', 'a1000000-0000-0000-0000-000000000003', 'Complete hydraulic overhaul to OEM spec, performance test', 'Overhaul 3 BFPs in phased schedule; 12-month performance warranty', '2025-08-01', 'received');
+  ('d1000000-0000-0000-0000-000000000001', 'RFQ-2025-0031', 'e1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000001', 'API 682 Category 3 dual seal, Plan 54, Inconel 718 spring', 'Supply 4 sets + commissioning support', '2025-07-01', 'received'),
+  ('d1000000-0000-0000-0000-000000000002', 'RFQ-2025-0032', 'e1000000-0000-0000-0000-000000000003', 'a1000000-0000-0000-0000-000000000003', 'Complete hydraulic overhaul to OEM spec, performance test', 'Overhaul 3 BFPs in phased schedule; 12-month performance warranty', '2025-08-01', 'received');
 
 insert into opportunities (id, enquiry_id, account_id, title, stage, product_line, industry, value_usd, probability, expected_close_date, competitor) values
-  ('o1000000-0000-0000-0000-000000000001', 'e1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000001', 'CDU Seal Upgrade — 4 sets API 682', 'RFQ Issued', 'Seals', 'Oil & Gas', 95000, 65, '2025-08-15', 'Flowserve'),
-  ('o1000000-0000-0000-0000-000000000002', 'e1000000-0000-0000-0000-000000000002', 'a1000000-0000-0000-0000-000000000002', 'BASF Plate Pack Replacement', 'Technical Discussion', 'Heat Exchangers', 'Chemical', 42000, 40, '2025-09-01', 'Alfa Laval'),
-  ('o1000000-0000-0000-0000-000000000003', 'e1000000-0000-0000-0000-000000000003', 'a1000000-0000-0000-0000-000000000003', 'TNB BFP Phased Overhaul x3', 'Quotation Submitted', 'Service', 'Power', 220000, 55, '2025-10-01', 'KSB'),
-  ('o1000000-0000-0000-0000-000000000004', null, 'a1000000-0000-0000-0000-000000000004', 'Pfizer CIP Pump Replacement', 'Planned Visit', 'Pumps', 'Pharma', 28000, 20, '2025-11-30', 'Grundfos');
+  ('f1000000-0000-0000-0000-000000000001', 'e1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000001', 'CDU Seal Upgrade — 4 sets API 682', 'RFQ Issued', 'Seals', 'Oil & Gas', 95000, 65, '2025-08-15', 'Flowserve'),
+  ('f1000000-0000-0000-0000-000000000002', 'e1000000-0000-0000-0000-000000000002', 'a1000000-0000-0000-0000-000000000002', 'BASF Plate Pack Replacement', 'Technical Discussion', 'Heat Exchangers', 'Chemical', 42000, 40, '2025-09-01', 'Alfa Laval'),
+  ('f1000000-0000-0000-0000-000000000003', 'e1000000-0000-0000-0000-000000000003', 'a1000000-0000-0000-0000-000000000003', 'TNB BFP Phased Overhaul x3', 'Quotation Submitted', 'Service', 'Power', 220000, 55, '2025-10-01', 'KSB'),
+  ('f1000000-0000-0000-0000-000000000004', null, 'a1000000-0000-0000-0000-000000000004', 'Pfizer CIP Pump Replacement', 'Planned Visit', 'Pumps', 'Pharma', 28000, 20, '2025-11-30', 'Grundfos');
