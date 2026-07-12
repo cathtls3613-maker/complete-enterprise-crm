@@ -1,41 +1,38 @@
-# vibe-stack-supabase
+# IndustrialCRM — complete-enterprise-crm
 
-Next.js 15 + Supabase starter for shipping vibe-coded apps fast. Clone, provision, build.
+Enterprise CRM for industrial sales teams (pumps, seals, heat exchangers, valves):
+structured visit reports, an enquiry → RFQ → quotation → opportunity conversion chain,
+and role dashboards replacing spreadsheets. Demo-first: the homepage is the working app,
+no login wall (auth arrives in the lock-down sprint).
 
-## Stack
+Plan and specs live in [`/docs`](docs/PRD.md). Stack: Next.js 15 (App Router, Server
+Actions) + Supabase (Postgres) + Tailwind v4, deployed on Vercel from `main`.
 
-| Layer | Choice |
-|---|---|
-| Framework | Next.js 15 (App Router, React 19, Server Actions) |
-| Language | TypeScript strict |
-| Styles | Tailwind CSS v4 (CSS-first, no config file) |
-| Auth + DB | Supabase (`@supabase/ssr`) |
-| Package manager | Bun |
-| Deploy | Vercel |
+## One-time database setup
 
-## Quick start
+The schema + seed live in [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql).
+If the app shows a "Database not initialized" banner, paste that file into the Supabase
+SQL editor (Dashboard → SQL Editor → Run). That's the only manual step — the app lights
+up with seed data immediately.
+
+## Core flow (the PRD success scenario)
+
+1. `/visits/new` — log a structured visit report (mandatory fields enforced)
+2. Visit detail → **Convert to Enquiry** → confirm the pre-filled modal
+3. The enquiry appears in `/enquiries` (numbered `ENQ-YYYY-NNNN`, linked to the visit)
+   and as a linked opportunity in the 14-stage funnel at `/opportunities`
+4. Enquiry → **Create RFQ** (pre-filled) → RFQ → **Create Quotation** →
+   draft → submitted → won/lost feeds the `/dashboard/se` KPIs
+
+Every create/update/delete writes an `audit_logs` row. Opportunities are scored by a
+rule engine (`rule_engine_v1`) on each save; a human override marks them reviewed.
+
+## Local development
 
 ```bash
-bun install
-cp .env.example .env.local   # fill in your Supabase keys
-bun dev
+npm install
+npx vercel link && npx vercel env pull .env.local   # Supabase URL + anon key
+npm run dev
 ```
 
-Open http://localhost:3000. Edit `app/page.tsx` to start building.
-
-## Provisioning a new project
-
-Use the `/new-vibe-project <name>` skill (see `claude-dotfiles` repo) which:
-1. Clones this template and renames it
-2. Creates a new GitHub repo and pushes
-3. Creates a Supabase project and injects URL + anon key
-4. Creates a Vercel project linked to the GitHub repo
-5. Triggers first deploy and returns the preview URL
-
-## Working with AI
-
-See [CLAUDE.md](CLAUDE.md) for conventions. This repo is pre-wired for gstack — start with `/office-hours`.
-
-## Switching to Neon
-
-If you need Postgres without Supabase (e.g. prefer Drizzle ORM + Clerk for auth), a `vibe-stack-neon` variant is planned. For now: fork this and swap `@supabase/ssr` for `drizzle-orm` + `@neondatabase/serverless`, add Clerk or NextAuth.
+Deploy by git only: `git push` to `main` → Vercel builds. Never `vercel deploy`.
