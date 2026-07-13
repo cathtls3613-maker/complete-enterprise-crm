@@ -50,6 +50,9 @@ function friendlyDbError(error: { code?: string; message?: string }): string {
   if (isSchemaMissing(error)) {
     return "Database not initialized — apply supabase/migrations/0001_init.sql first.";
   }
+  if (error.code === "42501" || (error.message ?? "").includes("row-level security")) {
+    return "Not allowed — sign in to create or edit records.";
+  }
   return `Could not save — ${error.message ?? "check your connection"}`;
 }
 
