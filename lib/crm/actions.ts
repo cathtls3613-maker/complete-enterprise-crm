@@ -9,6 +9,7 @@ import {
   QUOTATION_STATUSES,
 } from "@/lib/crm/constants";
 import { isSchemaMissing } from "@/lib/crm/data";
+import { guessProductLine } from "@/lib/crm/product-line";
 import type { ActionState } from "@/lib/crm/action-state";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
@@ -401,18 +402,6 @@ export async function convertVisitToEnquiry(_: ActionState, fd: FormData): Promi
   }
 
   withToast("/enquiries", `Enquiry ${enquiryNumber} created from visit`);
-}
-
-function guessProductLine(equipmentType: string | null): string | null {
-  if (!equipmentType) return null;
-  const t = equipmentType.toLowerCase();
-  if (t.includes("seal")) return "Seals";
-  if (t.includes("pump")) return "Pumps";
-  if (t.includes("heat") || t.includes("hex")) return "Heat Exchangers";
-  if (t.includes("valve")) return "Valves";
-  if (t.includes("service") || t.includes("overhaul")) return "Service";
-  if (t.includes("spare")) return "Spares";
-  return null;
 }
 
 // ── enquiries ────────────────────────────────────────────────────────────────

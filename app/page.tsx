@@ -29,6 +29,10 @@ export default async function HomePage() {
   const pipelineValue = openOpps.reduce((sum, o) => sum + (o.value_usd ?? 0), 0);
   const visitsDone = visits.rows.filter((v) => v.visit_status === "done").length;
   const visitsPlanned = visits.rows.filter((v) => v.visit_status === "planned").length;
+  const today = new Date().toISOString().slice(0, 10);
+  const overdueActions = visits.rows.filter(
+    (v) => v.next_action_deadline && v.next_action_deadline < today && !v.converted_to_enquiry,
+  ).length;
 
   return (
     <div>
@@ -46,7 +50,7 @@ export default async function HomePage() {
       {dbMissing ? <DbSetupBanner /> : null}
       {errorMessage ? <ErrorBanner message={errorMessage} /> : null}
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <KpiCard label="Accounts" value={accounts.rows.length} hint="Active customer accounts" />
         <KpiCard
           label="Open pipeline"
@@ -62,6 +66,17 @@ export default async function HomePage() {
           label="Visits planned"
           value={visitsPlanned}
           hint={visitsPlanned === 0 ? "Nothing scheduled" : "Awaiting completion"}
+        />
+        <KpiCard
+          label="Overdue actions"
+          value={
+            overdueActions > 0 ? (
+              <span className="text-rose-600">{overdueActions}</span>
+            ) : (
+              0
+            )
+          }
+          hint={overdueActions === 0 ? "Follow-up book is clean" : "Past deadline, not converted"}
         />
       </div>
 

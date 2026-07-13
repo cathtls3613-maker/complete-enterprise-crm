@@ -17,6 +17,14 @@ import {
 
 export const dynamic = "force-dynamic";
 
+function isOverdue(v: VisitReport): boolean {
+  return Boolean(
+    v.next_action_deadline &&
+      v.next_action_deadline < new Date().toISOString().slice(0, 10) &&
+      !v.converted_to_enquiry,
+  );
+}
+
 export default async function VisitsPage() {
   const { rows, dbMissing, errorMessage } = await listQuery<VisitReport>((s) =>
     s
@@ -77,7 +85,16 @@ export default async function VisitsPage() {
                     {v.equipment_discussed?.join(", ") || "—"}
                   </span>
                 </td>
-                <td className={tdCls}>{formatDate(v.next_action_deadline)}</td>
+                <td className={tdCls}>
+                  <span className="flex items-center gap-2">
+                    {formatDate(v.next_action_deadline)}
+                    {isOverdue(v) ? (
+                      <span className="inline-flex items-center rounded-md bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 ring-1 ring-inset ring-rose-600/20">
+                        Overdue
+                      </span>
+                    ) : null}
+                  </span>
+                </td>
                 <td className={tdCls}>
                   <Badge value={v.visit_status} />
                 </td>

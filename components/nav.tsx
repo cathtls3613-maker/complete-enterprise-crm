@@ -14,6 +14,7 @@ const LINKS = [
   { href: "/opportunities", label: "Opportunities" },
   { href: "/dashboard/se", label: "My KPIs" },
   { href: "/dashboard/manager", label: "Manager" },
+  { href: "/dashboard/director", label: "Director" },
 ];
 
 export function Nav() {
