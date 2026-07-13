@@ -318,6 +318,59 @@ export async function deleteVisitReport(fd: FormData): Promise<void> {
   withToast("/visits", "Visit report deleted");
 }
 
+// Attachment paths live in visit_reports.attachments; the file bytes live in
+// the public `visit-attachments` storage bucket (see 0002_attachments.sql).
+
+export async function appendVisitAttachment(
+  visitId: string,
+  path: string,
+): Promise<{ error: string | null }> {
+  if (!visitId || !path) return { error: "Missing visit or file path" };
+  const supabase = await createClient();
+  const { data: visit, error: readError } = await supabase
+    .from("visit_reports")
+    .select("attachments")
+    .eq("id", visitId)
+    .maybeSingle();
+  if (readError) return { error: friendlyDbError(readError) };
+  if (!visit) return { error: "Visit report not found" };
+
+  const next = [...(visit.attachments ?? []), path];
+  const { error } = await supabase
+    .from("visit_reports")
+    .update({ attachments: next })
+    .eq("id", visitId);
+  if (error) return { error: friendlyDbError(error) };
+  await audit(supabase, "update", "visit_reports", visitId, { attachments: visit.attachments }, { attachments: next });
+  revalidatePath(`/visits/${visitId}`);
+  return { error: null };
+}
+
+export async function removeVisitAttachment(
+  visitId: string,
+  path: string,
+): Promise<{ error: string | null }> {
+  if (!visitId || !path) return { error: "Missing visit or file path" };
+  const supabase = await createClient();
+  const { data: visit, error: readError } = await supabase
+    .from("visit_reports")
+    .select("attachments")
+    .eq("id", visitId)
+    .maybeSingle();
+  if (readError) return { error: friendlyDbError(readError) };
+  if (!visit) return { error: "Visit report not found" };
+
+  const next = (visit.attachments ?? []).filter((p: string) => p !== path);
+  const { error } = await supabase
+    .from("visit_reports")
+    .update({ attachments: next })
+    .eq("id", visitId);
+  if (error) return { error: friendlyDbError(error) };
+  await audit(supabase, "update", "visit_reports", visitId, { attachments: visit.attachments }, { attachments: next });
+  revalidatePath(`/visits/${visitId}`);
+  return { error: null };
+}
+
 // ── convert to enquiry: the one core verb ────────────────────────────────────
 // Inserts the enquiry, flips the visit's converted flag, and creates the
 // linked opportunity so the conversion shows up in the funnel immediately

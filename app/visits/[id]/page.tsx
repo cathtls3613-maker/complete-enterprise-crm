@@ -6,6 +6,7 @@ import { formatDate } from "@/lib/crm/format";
 import { deleteVisitReport } from "@/lib/crm/actions";
 import { ConvertToEnquiry } from "@/components/forms/convert-to-enquiry";
 import { ConfirmDelete } from "@/components/confirm-delete";
+import { AttachmentsPanel } from "@/components/attachments-panel";
 import {
   Badge,
   Card,
@@ -99,6 +100,10 @@ export default async function VisitDetailPage({
           </div>
         ))}
       </Card>
+
+      <div className="mt-6">
+        <AttachmentsPanel visitId={id} attachments={visit.attachments ?? []} />
+      </div>
     </div>
   );
 }
